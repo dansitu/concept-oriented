@@ -74,13 +74,14 @@ function Concept(name, attributes, behaviours, sharedConcepts) {
 
   // Although since registering shared concepts involves calling immediate
   // behaviours, this needs to happen last!
-  self.sharedConcepts = sharedConcepts || [];
-  self.sharedConcepts = self.sharedConcepts.map(function(conceptName) {
+  self.sharedConcepts = [];
+  sharedConcepts = sharedConcepts || [];
+  sharedConcepts.forEach(function(conceptName) {
     var shared = rootConcept.getInstance(conceptName);
+    self.registerShared(shared);
     shared.registerShared(self);
     return shared;
   });
-
 
 };
 
@@ -88,9 +89,9 @@ Concept.prototype.registerShared = function(newSharedConcept) {
   var self = this;
   // Add to our list of shared concepts
   self.sharedConcepts.push(self);
-  // Call any immediate behaviours on this new concept
-  Object.keys(self.immediateBehavioursByName).forEach(function(name) {
-    self.immediateBehavioursByName[name].call(newSharedConcept);
+  // Call any of the new concepts immediate behaviours on the current concept
+  Object.keys(newSharedConcept.immediateBehavioursByName).forEach(function(name) {
+    newSharedConcept.immediateBehavioursByName[name].call(self);
   });
 
 };
