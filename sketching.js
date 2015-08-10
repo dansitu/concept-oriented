@@ -5,6 +5,7 @@
 // - getAttribute should find attributes from shared concepts too
 // - shared concept should be related concept or linked concept?
 // - should concepts be named traits? and linked concepts cotraits?
+// - syntax and mechanism for type checking of attributes (specify concept or js type)
 
 var rootConcept = new Concept('concept', ['name'], [], []);
 
