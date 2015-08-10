@@ -1,5 +1,4 @@
 //TODO::
-// - Move function repo into definition DSL
 // - Make a promise based API to support async
 // - Rather than duplicating behaviours from shared concepts
 //   on the current concept, find them from further up the tree
@@ -44,49 +43,42 @@ var FUNCREPO = {
 
 var rootConcept = new Concept('concept', ['name'], [], []);
 
-function Concept(name, attributes, behaviours, sharedConcepts) {
+function Concept(details) {
 
   var self = this;
 
-  self.name = name;
+  self.name = details.name;
 
-  self.attributes = attributes || [];
+  self.attributes = details.attributes || [];
   self.attributesHash = {};
   // So we can look up the index for each attribute easily
   self.attributes.forEach(function(attribute, index) {
     self.attributesHash[attribute] = index;
   });
 
-  self.behaviours = behaviours || [];
-  self.getterBehavioursByAttribute = {};
-  self.callableBehavioursByName = {};
-  self.immediateBehavioursByName = {};
-  self.behaviours.forEach(function(behaviourName) {
-    var details = behaviourName.split('~');
-    var type = details[0];
-    var name = details[1];
-
-    if(type === 'getter') {
-      self.getterBehavioursByAttribute[name] = FUNCREPO[name];
-    } else if(type === 'callable') {
-      self.callableBehavioursByName[name] = FUNCREPO[name];
-    } else if(type === 'immediate') {
-      self.immediateBehavioursByName[name] = FUNCREPO[name];
-    }
-  });
+  self.behaviours = details.behaviours || {};
+  if(!self.behaviours.immediate) {
+    self.behaviours.immediate = {};
+  }
+  if(!self.behaviours.callable) {
+    self.behaviours.callable = {};
+  }
+  if(!self.behaviours.getter) {
+    self.behaviours.getter = {};
+  }
 
   self.store = {};
 
-  sharedConcepts = sharedConcepts || [];
   self.sharedConceptsHash = {};
-  sharedConcepts.forEach(function(conceptName) {
+  self.sharedConcepts = details.sharedConcepts || [];
+  self.sharedConcepts.forEach(function(conceptName) {
     var shared = rootConcept.getInstance(conceptName);
     self.registerShared(shared);
   });
 
   // Only once everything else is set up, call immediate behaviours
-  Object.keys(self.immediateBehavioursByName).forEach(function(name) {
-    self.immediateBehavioursByName[name].call(self);
+  Object.keys(self.behaviours.immediate).forEach(function(name) {
+    self.behaviours.immediate[name].call(self);
   });
 
 };
@@ -97,15 +89,15 @@ Concept.prototype.registerShared = function(newSharedConcept) {
   // Add to our list of shared concepts
   self.sharedConceptsHash[newSharedConcept.name] = newSharedConcept;
   // Call any of the new concepts immediate behaviours on the current concept
-  Object.keys(newSharedConcept.immediateBehavioursByName).forEach(function(name) {
-    newSharedConcept.immediateBehavioursByName[name].call(self);
+  Object.keys(newSharedConcept.behaviours.immediate).forEach(function(name) {
+    newSharedConcept.behaviours.immediate[name].call(self);
   });
   // Add any getter behaviours and callable behaviours
-  Object.keys(newSharedConcept.getterBehavioursByAttribute).forEach(function(name) {
-    self.getterBehavioursByAttribute[name] = newSharedConcept.getterBehavioursByAttribute[name];
+  Object.keys(newSharedConcept.behaviours.getter).forEach(function(name) {
+    self.behaviours.getter[name] = newSharedConcept.behaviours.getter[name];
   });
-    Object.keys(newSharedConcept.callableBehavioursByName).forEach(function(name) {
-    self.callableBehavioursByName[name] = newSharedConcept.callableBehavioursByName[name];
+  Object.keys(newSharedConcept.behaviours.callable).forEach(function(name) {
+    self.behaviours.callable[name] = newSharedConcept.behaviours.callable[name];
   });
   // Also register any parent shared concepts
   Object.keys(newSharedConcept.sharedConceptsHash).forEach(function(conceptName) {
@@ -121,7 +113,7 @@ Concept.prototype.getInstance = function(name) {
 Concept.prototype.getAttribute = function(name) {
   console.log('Attempting to get attribute ' + name + ' from concept ' + this.name);
   // TODO: Also check linked concepts for get behaviours
-  var getter = this.getterBehavioursByAttribute[name];
+  var getter = this.behaviours.getter[name];
   if(getter) {
     return getter.call(this);
   }
@@ -144,7 +136,7 @@ Concept.prototype.getAttribute = function(name) {
 Concept.prototype.makeCall = function(name) {
   // Call a callable behaviour
   console.log('Trying to call ' + name + ' on concept ' + this.name);
-  return this.callableBehavioursByName[name].apply(this, Array.prototype.slice.call(arguments, 1));
+  return this.behaviours.callable[name].apply(this, Array.prototype.slice.call(arguments, 1));
 };
 
 Concept.prototype.add = function(input) {
@@ -152,7 +144,12 @@ Concept.prototype.add = function(input) {
     this.store[input.name] = input;
   } else {
     // Assume this follows the format of the current concept
-    var rowConcept = new Concept(input.name, this.attributes, this.behaviours, ['row']);
+    var rowConcept = new Concept({
+      name: input.name,
+      attributes: this.attributes,
+      behaviours: this.behaviours,
+      sharedConcepts: ['row']
+    });
     // Row concepts just have an array of data in their store
     rowConcept.store = input.attributeValues;
     // Add the rowConcept to the current concept
@@ -162,8 +159,28 @@ Concept.prototype.add = function(input) {
   }
 };
 
-rootConcept.add(new Concept('row'));
+rootConcept.add(new Concept({ name: 'row' }));
 rootConcept.add(new Concept('ongoing', [], ['immediate~poll_shared']));
+rootConcept.add(new Concept({
+  name: 'ongoing',
+  behaviours: {
+    immediate: {
+      poll_shared: function() {
+        var self = this;
+        var action = self.getAttribute('action');
+        var period = self.getAttribute('period');
+        if(!action || !period) {
+          console.log('tried polling but no action or period');
+          return;
+        }
+        setInterval(function() {
+          console.log('polling');
+          self.makeCall(action);
+        }, period);
+      }
+    }
+  }
+}));
 
 var learn = function(parentConceptName, concept) {
   if(concept) {
@@ -172,17 +189,54 @@ var learn = function(parentConceptName, concept) {
       .add(concept);
   } else {
     concept = parentConceptName;
-    rootConcept.add(concept);
+    rootConcept.add(new Concept(concept));
   }
 };
 
-learn(new Concept('sensor', ['type', 'port'], ['callable~read']));
+learn({
+  name: 'sensor',
+  attributes: ['type', 'port'],
+  behaviours: {
+    callable: {
+      read: function() {
+        return 100;
+      }
+    }
+  }
+});
 learn('sensor', { name: 'dht22', attributeValues: ['temperature', '999'] });
 
-learn(new Concept('data', ['sensor', 'value'], ['getter~value']));
+learn({
+  name: 'data',
+  attributes: ['sensor', 'value'],
+  behaviours: {
+    getter: {
+      value: function() {
+        return this.getAttribute('sensor').makeCall('read');
+      }
+    }
+  }
+});
 learn('data', { name: 'temperature', attributeValues: [rootConcept.getInstance('sensor').getInstance('dht22')]});
 
-learn(new Concept('alert', ['data', 'threshold', 'period', 'action'], ['callable~test_and_alert'], ['ongoing']));
+learn({
+  name: 'alert',
+  attributes: ['data', 'threshold', 'period', 'action'],
+  behaviours: {
+    callable: {
+      test_and_alert: function() {
+        var value = this.getAttribute('data').getAttribute('value');
+        var threshold = this.getAttribute('threshold');
+        console.log('value'  + value);
+        console.log('threshold' + threshold);
+        if(value > threshold) {
+          console.log('Alerting with value ' + value);
+        }
+      }
+    }
+  },
+  sharedConcepts: ['ongoing']
+});
 learn('alert', { name: 'emailDan', attributeValues: [ rootConcept.getInstance('data').getInstance('temperature'), 90, 4000, 'test_and_alert']});
 
 
