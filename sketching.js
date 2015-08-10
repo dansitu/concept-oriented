@@ -1,3 +1,13 @@
+//TODO::
+// - Move function repo into definition DSL
+// - Make a promise based API to support async
+// - Rather than duplicating behaviours from shared concepts
+//   on the current concept, find them from further up the tree
+// - getAttribute should find attributes from shared concepts too
+// - shared concept should be related concept or linked concept?
+// - should concepts be named traits? and linked concepts cotraits?
+
+
 // Repo of functions. Temporary.
 var FUNCREPO = {
   // Used by sensor
@@ -56,7 +66,7 @@ function Concept(name, attributes, behaviours, sharedConcepts) {
     var type = details[0];
     var name = details[1];
 
-    if(type === 'get') {
+    if(type === 'getter') {
       self.getterBehavioursByAttribute[name] = FUNCREPO[name];
     } else if(type === 'callable') {
       self.callableBehavioursByName[name] = FUNCREPO[name];
@@ -169,7 +179,7 @@ var learn = function(parentConceptName, concept) {
 learn(new Concept('sensor', ['type', 'port'], ['callable~read']));
 learn('sensor', { name: 'dht22', attributeValues: ['temperature', '999'] });
 
-learn(new Concept('data', ['sensor', 'value'], ['get~value']));
+learn(new Concept('data', ['sensor', 'value'], ['getter~value']));
 learn('data', { name: 'temperature', attributeValues: [rootConcept.getInstance('sensor').getInstance('dht22')]});
 
 learn(new Concept('alert', ['data', 'threshold', 'period', 'action'], ['callable~test_and_alert'], ['ongoing']));
