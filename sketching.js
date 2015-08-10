@@ -158,13 +158,24 @@ Concept.prototype.add = function(input) {
 rootConcept.add(new Concept('row'));
 rootConcept.add(new Concept('ongoing', [], ['immediate~poll_shared']));
 
-rootConcept.add(new Concept('sensor', ['type', 'port'], ['callable~read']));
-rootConcept.getInstance('sensor').add({ name: 'dht22', attributeValues: ['temperature', '999'] });
+var learn = function(parentConceptName, concept) {
+  if(concept) {
+    rootConcept
+      .getInstance(parentConceptName)
+      .add(concept);
+  } else {
+    concept = parentConceptName;
+    rootConcept.add(concept);
+  }
+};
 
-rootConcept.add(new Concept('data', ['sensor', 'value'], ['get~value']));
-rootConcept.getInstance('data').add({ name: 'temperature', attributeValues: [rootConcept.getInstance('sensor').getInstance('dht22')]});
+learn(new Concept('sensor', ['type', 'port'], ['callable~read']));
+learn('sensor', { name: 'dht22', attributeValues: ['temperature', '999'] });
 
-rootConcept.add(new Concept('alert', ['data', 'threshold', 'period', 'action'], ['callable~test_and_alert'], ['ongoing']));
-rootConcept.getInstance('alert').add({ name: 'emailDan', attributeValues: [ rootConcept.getInstance('data').getInstance('temperature'), 90, 4000, 'test_and_alert']});
+learn(new Concept('data', ['sensor', 'value'], ['get~value']));
+learn('data', { name: 'temperature', attributeValues: [rootConcept.getInstance('sensor').getInstance('dht22')]});
+
+learn(new Concept('alert', ['data', 'threshold', 'period', 'action'], ['callable~test_and_alert'], ['ongoing']));
+learn('alert', { name: 'emailDan', attributeValues: [ rootConcept.getInstance('data').getInstance('temperature'), 90, 4000, 'test_and_alert']});
 
 
