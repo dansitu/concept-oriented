@@ -67,9 +67,6 @@ function Concept(name, attributes, behaviours, sharedConcepts) {
 
   self.store = {};
 
-
-  // Although since registering shared concepts involves calling immediate
-  // behaviours, this needs to happen last!
   sharedConcepts = sharedConcepts || [];
   self.sharedConceptsHash = {};
   sharedConcepts.forEach(function(conceptName) {
