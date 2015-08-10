@@ -214,16 +214,17 @@ learn('alert', { name: 'emailDan', attributeValues: [ rootConcept.getInstance('d
 //       immediate: {
 //         poll_shared: function() {
 //           var self = this;
-//           var action = self.getAttribute('action');
-//           var period = self.getAttribute('period');
-//           if(!action || !period) {
-//             console.log('tried polling but no action or period');
-//             return;
-//           }
-//           setInterval(function() {
-//             console.log('polling');
-//             self.makeCall(action);
-//           }, period);
+//           self
+//             .getAttributes(['action', 'period'])
+//             .then(function(action, period) {
+//               if(!action || !period) {
+//                 throw new NonFatalError('Tried polling but no action or period');
+//               }
+//               setInterval(function() {
+//                 console.log('polling');
+//                 self.makeCall(action);
+//               }, period);
+//             });
 //         }
 //       }
 //     }
@@ -234,7 +235,7 @@ learn('alert', { name: 'emailDan', attributeValues: [ rootConcept.getInstance('d
 //     behaviours: {
 //       callable: {
 //         read: function() {
-//           return 100;
+//           return Promise.fulfil(100);
 //         }
 //       }
 //     }
