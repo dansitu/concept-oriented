@@ -19,15 +19,13 @@ var FUNCREPO = {
     var self = this;
     var action = self.getAttribute('action');
     var period = self.getAttribute('period');
-    console.log(self);
-    console.log(action);
-    console.log(period);
     if(!action || !period) {
-      console.log('no action or period');
+      console.log('tried polling but no action or period');
       return;
     }
     setInterval(function() {
-        self.makeCall(action);
+      console.log('polling');
+      self.makeCall(action);
     }, period);
   }
 };
@@ -67,33 +65,39 @@ function Concept(name, attributes, behaviours, sharedConcepts) {
 
   self.store = {};
 
-  // Only once everything else is set up, call immediate behaviours
-  Object.keys(self.immediateBehavioursByName).forEach(function(name) {
-    self.immediateBehavioursByName[name].call(self);
-  });
 
   // Although since registering shared concepts involves calling immediate
   // behaviours, this needs to happen last!
-  self.sharedConcepts = [];
   sharedConcepts = sharedConcepts || [];
+  self.sharedConcepts = [];
+  self.conceptsHash = {};
   sharedConcepts.forEach(function(conceptName) {
     var shared = rootConcept.getInstance(conceptName);
     self.registerShared(shared);
-    shared.registerShared(self);
     return shared;
+  });
+
+  // Only once everything else is set up, call immediate behaviours
+  Object.keys(self.immediateBehavioursByName).forEach(function(name) {
+    self.immediateBehavioursByName[name].call(self);
   });
 
 };
 
 Concept.prototype.registerShared = function(newSharedConcept) {
   var self = this;
+  console.log('Adding shared concept ' + newSharedConcept.name + ' to concept ' + self.name);
   // Add to our list of shared concepts
-  self.sharedConcepts.push(self);
+  self.sharedConcepts.push(newSharedConcept);
+  self.conceptsHash[newSharedConcept.name] = newSharedConcept;
   // Call any of the new concepts immediate behaviours on the current concept
   Object.keys(newSharedConcept.immediateBehavioursByName).forEach(function(name) {
     newSharedConcept.immediateBehavioursByName[name].call(self);
   });
-
+  // Also register any parent shared concepts
+  newSharedConcept.sharedConcepts.forEach(function(parentSharedConcept) {
+    self.registerShared(parentSharedConcept);
+  });
 };
 
 // Return the instance with this name
@@ -102,6 +106,10 @@ Concept.prototype.getInstance = function(name) {
 };
 
 Concept.prototype.getAttribute = function(name) {
+  console.log('Attempting to get attribute ' + name + ' from concept ' + this.name);
+  if(this.name === 'emailDan') {
+    console.log(this);
+  }
   // TODO: Also check linked concepts for get behaviours
   var getter = this.getBehavioursByAttribute[name];
   if(getter) {
@@ -109,7 +117,7 @@ Concept.prototype.getAttribute = function(name) {
   }
   // If this is a row concept, just return the value from the store
   // array at the correct index
-  if(this.attributesHash.hasOwnProperty('row')) {
+  if(this.conceptsHash['row']) {
     return this.store[this.attributesHash[name]];
   } else {
     // Otherwise, the store is an object and we can find the concept
