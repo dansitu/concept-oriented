@@ -6,41 +6,6 @@
 // - shared concept should be related concept or linked concept?
 // - should concepts be named traits? and linked concepts cotraits?
 
-
-// Repo of functions. Temporary.
-var FUNCREPO = {
-  // Used by sensor
-  read: function() {
-    return 100;
-  },
-  // Used by data
-  value: function() {
-    return this.getAttribute('sensor').makeCall('read');
-  },
-  test_and_alert: function() {
-    var value = this.getAttribute('data').getAttribute('value');
-    var threshold = this.getAttribute('threshold');
-    console.log('value'  + value);
-    console.log('threshold' + threshold);
-    if(value > threshold) {
-      console.log('Alerting with value ' + value);
-    }
-  },
-  poll_shared: function() {
-    var self = this;
-    var action = self.getAttribute('action');
-    var period = self.getAttribute('period');
-    if(!action || !period) {
-      console.log('tried polling but no action or period');
-      return;
-    }
-    setInterval(function() {
-      console.log('polling');
-      self.makeCall(action);
-    }, period);
-  }
-};
-
 var rootConcept = new Concept('concept', ['name'], [], []);
 
 function Concept(details) {
