@@ -125,7 +125,6 @@ Concept.prototype.add = function(input) {
 };
 
 rootConcept.add(new Concept({ name: 'row' }));
-rootConcept.add(new Concept('ongoing', [], ['immediate~poll_shared']));
 rootConcept.add(new Concept({
   name: 'ongoing',
   behaviours: {
@@ -157,6 +156,7 @@ var learn = function(parentConceptName, concept) {
     rootConcept.add(new Concept(concept));
   }
 };
+
 
 learn({
   name: 'sensor',
@@ -205,3 +205,36 @@ learn({
 learn('alert', { name: 'emailDan', attributeValues: [ rootConcept.getInstance('data').getInstance('temperature'), 90, 4000, 'test_and_alert']});
 
 
+// Possible new DSL
+// learn({ name: 'row' })
+//   .then(learn({
+//     name: 'ongoing',
+//     behaviours: {
+//       immediate: {
+//         poll_shared: function() {
+//           var self = this;
+//           var action = self.getAttribute('action');
+//           var period = self.getAttribute('period');
+//           if(!action || !period) {
+//             console.log('tried polling but no action or period');
+//             return;
+//           }
+//           setInterval(function() {
+//             console.log('polling');
+//             self.makeCall(action);
+//           }, period);
+//         }
+//       }
+//     }
+//   }))
+//   .then(learn({
+//     name: 'sensor',
+//     attributes: ['type', 'port'],
+//     behaviours: {
+//       callable: {
+//         read: function() {
+//           return 100;
+//         }
+//       }
+//     }
+//   }));
