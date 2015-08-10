@@ -2,15 +2,17 @@
 var FUNCREPO = {
   // Used by sensor
   read: function() {
-    return 50;
+    return 100;
   },
   // Used by data
   value: function() {
-    return this.getAttribute('sensor').call('read');
+    return this.getAttribute('sensor').makeCall('read');
   },
   test_and_alert: function() {
-    var value = this.getAttribute('value');
+    var value = this.getAttribute('data').getAttribute('value');
     var threshold = this.getAttribute('threshold');
+    console.log('value'  + value);
+    console.log('threshold' + threshold);
     if(value > threshold) {
       console.log('Alerting with value ' + value);
     }
@@ -104,13 +106,10 @@ Concept.prototype.getInstance = function(name) {
 
 Concept.prototype.getAttribute = function(name) {
   console.log('Attempting to get attribute ' + name + ' from concept ' + this.name);
-  if(this.name === 'emailDan') {
-    console.log(this);
-  }
   // TODO: Also check linked concepts for get behaviours
   var getter = this.getBehavioursByAttribute[name];
   if(getter) {
-    return getter();
+    return getter.call(this);
   }
   // If this is a row concept, just return the value from the store
   // array at the correct index
@@ -130,6 +129,8 @@ Concept.prototype.getAttribute = function(name) {
 
 Concept.prototype.makeCall = function(name) {
   // Call a callable behaviour
+  console.log('Trying to call ' + name + ' on concept ' + this.name);
+  return this.callableBehavioursByName[name].apply(this, Array.prototype.slice.call(arguments, 1));
 };
 
 Concept.prototype.add = function(input) {
@@ -159,10 +160,10 @@ rootConcept.add(new Concept('ongoing', [], ['immediate~poll_shared']));
 rootConcept.add(new Concept('sensor', ['type', 'port'], ['callable~read']));
 rootConcept.getInstance('sensor').add({ name: 'dht22', attributeValues: ['temperature', '999'] });
 
-rootConcept.add(new Concept('data', ['sensor:sensor', 'value'], ['get~value']));
+rootConcept.add(new Concept('data', ['sensor', 'value'], ['get~value']));
 rootConcept.getInstance('data').add({ name: 'temperature', attributeValues: [rootConcept.getInstance('sensor').getInstance('dht22')]});
 
-rootConcept.add(new Concept('alert', ['sensordata:data', 'threshold', 'period', 'action'], ['callable~test_and_alert'], ['ongoing']));
+rootConcept.add(new Concept('alert', ['data', 'threshold', 'period', 'action'], ['callable~test_and_alert'], ['ongoing']));
 rootConcept.getInstance('alert').add({ name: 'emailDan', attributeValues: [ rootConcept.getInstance('data').getInstance('temperature'), 90, 4000, 'test_and_alert']});
 
 
