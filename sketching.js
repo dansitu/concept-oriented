@@ -48,7 +48,7 @@ function Concept(name, attributes, behaviours, sharedConcepts) {
   });
 
   self.behaviours = behaviours || [];
-  self.getBehavioursByAttribute = {};
+  self.getterBehavioursByAttribute = {};
   self.callableBehavioursByName = {};
   self.immediateBehavioursByName = {};
   self.behaviours.forEach(function(behaviourName) {
@@ -57,7 +57,7 @@ function Concept(name, attributes, behaviours, sharedConcepts) {
     var name = details[1];
 
     if(type === 'get') {
-      self.getBehavioursByAttribute[name] = FUNCREPO[name];
+      self.getterBehavioursByAttribute[name] = FUNCREPO[name];
     } else if(type === 'callable') {
       self.callableBehavioursByName[name] = FUNCREPO[name];
     } else if(type === 'immediate') {
@@ -93,6 +93,13 @@ Concept.prototype.registerShared = function(newSharedConcept) {
   Object.keys(newSharedConcept.immediateBehavioursByName).forEach(function(name) {
     newSharedConcept.immediateBehavioursByName[name].call(self);
   });
+  // Add any getter behaviours and callable behaviours
+  Object.keys(newSharedConcept.getterBehavioursByAttribute).forEach(function(name) {
+    self.getterBehavioursByAttribute[name] = newSharedConcept.getterBehavioursByAttribute[name];
+  });
+    Object.keys(newSharedConcept.callableBehavioursByName).forEach(function(name) {
+    self.callableBehavioursByName[name] = newSharedConcept.callableBehavioursByName[name];
+  });
   // Also register any parent shared concepts
   Object.keys(newSharedConcept.sharedConceptsHash).forEach(function(conceptName) {
     self.registerShared(newSharedConcept.sharedConceptsHash[conceptName]);
@@ -107,7 +114,7 @@ Concept.prototype.getInstance = function(name) {
 Concept.prototype.getAttribute = function(name) {
   console.log('Attempting to get attribute ' + name + ' from concept ' + this.name);
   // TODO: Also check linked concepts for get behaviours
-  var getter = this.getBehavioursByAttribute[name];
+  var getter = this.getterBehavioursByAttribute[name];
   if(getter) {
     return getter.call(this);
   }
@@ -139,19 +146,13 @@ Concept.prototype.add = function(input) {
   } else {
     // Assume this follows the format of the current concept
     var rowConcept = new Concept(input.name, this.attributes, this.behaviours, ['row']);
-    // In this case, how do we share behaviours? Right now they are not being shared.
+    // Row concepts just have an array of data in their store
     rowConcept.store = input.attributeValues;
+    // Add the rowConcept to the current concept
     this.store[rowConcept.name] = rowConcept;
+    // Then register this as a shared concept of the rowConcept
     rowConcept.registerShared(this);
   }
-
-
-  // TODO:
-  // Go through this concept's behaviours and see
-  // if any should act on this item.
-  // Go through shared concepts' behaviours and see
-  // if any should act on this item.
-  // Add item to our store.
 };
 
 rootConcept.add(new Concept('row'));
