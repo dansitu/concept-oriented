@@ -69,12 +69,10 @@ function Concept(name, attributes, behaviours, sharedConcepts) {
   // Although since registering shared concepts involves calling immediate
   // behaviours, this needs to happen last!
   sharedConcepts = sharedConcepts || [];
-  self.sharedConcepts = [];
-  self.conceptsHash = {};
+  self.sharedConceptsHash = {};
   sharedConcepts.forEach(function(conceptName) {
     var shared = rootConcept.getInstance(conceptName);
     self.registerShared(shared);
-    return shared;
   });
 
   // Only once everything else is set up, call immediate behaviours
@@ -88,15 +86,14 @@ Concept.prototype.registerShared = function(newSharedConcept) {
   var self = this;
   console.log('Adding shared concept ' + newSharedConcept.name + ' to concept ' + self.name);
   // Add to our list of shared concepts
-  self.sharedConcepts.push(newSharedConcept);
-  self.conceptsHash[newSharedConcept.name] = newSharedConcept;
+  self.sharedConceptsHash[newSharedConcept.name] = newSharedConcept;
   // Call any of the new concepts immediate behaviours on the current concept
   Object.keys(newSharedConcept.immediateBehavioursByName).forEach(function(name) {
     newSharedConcept.immediateBehavioursByName[name].call(self);
   });
   // Also register any parent shared concepts
-  newSharedConcept.sharedConcepts.forEach(function(parentSharedConcept) {
-    self.registerShared(parentSharedConcept);
+  Object.keys(newSharedConcept.sharedConceptsHash).forEach(function(conceptName) {
+    self.registerShared(newSharedConcept.sharedConceptsHash[conceptName]);
   });
 };
 
@@ -117,7 +114,7 @@ Concept.prototype.getAttribute = function(name) {
   }
   // If this is a row concept, just return the value from the store
   // array at the correct index
-  if(this.conceptsHash['row']) {
+  if(this.sharedConceptsHash['row']) {
     return this.store[this.attributesHash[name]];
   } else {
     // Otherwise, the store is an object and we can find the concept
